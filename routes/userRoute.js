@@ -15,7 +15,7 @@ route.post("/signup", async (req, res) => {
     };
     route.get("/", async (req, res) => {
       try {
-        const users = await User.find({},); // exclude password
+        const users = await User.find({}); // exclude password
         res.status(200).json(users);
       } catch (error) {
         res.status(500).json({ message: "Error fetching users", error });
@@ -34,17 +34,48 @@ route.post("/signup", async (req, res) => {
 });
 route.post("/login", async (req, res) => {
   try {
-    const { userName, password } = req.body;
-    const user = await User.findOne({ userName: userName });
-    if (!user || !(await user.comparePassword(password))) {
-      res.status(400).json({ message: "username or password not found" });
+    const { userName, email, password } = req.body;
+
+    if ((!userName && !email) || !password) {
+      return res
+        .status(400)
+        .json({ message: "Username/email and password are required" });
     }
-    res.status(200).json({ message: "user login sucessfully", response: user });
+
+    // Find by username or email
+    const user = await User.findOne({
+      $or: [{ userName: userName || "" }, { email: email || "" }],
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: "Invalid password" });
+    }
+
+    // Generate token
+    const payload = {
+      id: user.id,
+      userName: user.userName,
+      email: user.email,
+    };
+    const token = generatejwttoken(payload);
+    user.token = token;
+    await user.save();
+
+    res.status(200).json({
+      message: "User login successfully",
+      response: user,
+    });
   } catch (error) {
     console.log("error", error);
-    res.status(500).json({ message: "internal server error", error: error });
+    res.status(500).json({ message: "internal server error", error });
   }
 });
+
 route.delete("/", jwtAuthMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
