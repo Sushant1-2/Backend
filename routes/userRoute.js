@@ -13,6 +13,14 @@ route.post("/signup", async (req, res) => {
       userName: responce.userName,
       email: responce.email,
     };
+    route.get("/", async (req, res) => {
+      try {
+        const users = await User.find({},); // exclude password
+        res.status(200).json(users);
+      } catch (error) {
+        res.status(500).json({ message: "Error fetching users", error });
+      }
+    });
     const token = generatejwttoken(payload);
     user.token = token;
     responce = await user.save();
