@@ -15,7 +15,7 @@ route.post("/signup", async (req, res) => {
     };
     route.get("/", async (req, res) => {
       try {
-        const users = await User.find({}); // exclude password
+        const users = await User.find({});
         res.status(200).json(users);
       } catch (error) {
         res.status(500).json({ message: "Error fetching users", error });
@@ -32,8 +32,10 @@ route.post("/signup", async (req, res) => {
     res.status(500).json({ message: "internal server error", error: error });
   }
 });
+
 route.post("/login", async (req, res) => {
   try {
+    console.log("Login request body:", req.body);
     const { userName, email, password } = req.body;
 
     if ((!userName && !email) || !password) {
@@ -42,7 +44,6 @@ route.post("/login", async (req, res) => {
         .json({ message: "Username/email and password are required" });
     }
 
-    // Find by username or email
     const user = await User.findOne({
       $or: [{ userName: userName || "" }, { email: email || "" }],
     });
@@ -56,7 +57,6 @@ route.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid password" });
     }
 
-    // Generate token
     const payload = {
       id: user.id,
       userName: user.userName,
